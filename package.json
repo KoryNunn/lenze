@@ -1,0 +1,19 @@
+{
+  "name": "lenze",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "watchify ./example/index.js -o ./example/index.browser.js -d"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "deep-diff": "^0.3.3",
+    "shuv": "^1.0.1"
+  },
+  "devDependencies": {
+    "crel": "^2.2.0"
+  }
+}
