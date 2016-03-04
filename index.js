@@ -3,7 +3,8 @@ var EventEmitter = require('events'),
     shuv = require('shuv'),
     statham = require('statham'),
     createKey = require('./createKey'),
-    keyKey = createKey(-2);
+    keyKey = createKey(-2),
+    merge = require('merge');
 
 var INVOKE = 'invoke';
 var CHANGES = 'changes';
@@ -94,6 +95,8 @@ function inflateData(scope, value){
                     value: value,
                     count: 0
                 };
+            }else{
+                merge(scope.instanceHash[id].value, value);
             }
 
             return scope.instanceHash[id].value;

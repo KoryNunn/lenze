@@ -5,16 +5,19 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "watch": "watchify ./example/index.js -o ./example/index.browser.js -d & watchify ./example/app/app.js -o ./example/app/app.browser.js -d"
+    "watch": "watchify ./example/index.js -o ./example/index.browser.js -d & watchify ./example/app/app.js -o ./example/app/app.browser.js -d",
+    "watchfastn": "watchify ./fastnExample/index.js -o ./fastnExample/index.browser.js -d & watchify ./fastnExample/app/app.js -o ./fastnExample/app/app.browser.js -d"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "deep-diff": "^0.3.3",
+    "merge": "^1.2.0",
     "shuv": "^1.0.1",
     "statham": "^1.0.2"
   },
   "devDependencies": {
+    "cpjax": "^1.1.1",
     "crel": "^2.2.0"
   }
 }
