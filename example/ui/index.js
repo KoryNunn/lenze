@@ -4,12 +4,12 @@ var crel = require('crel'),
 module.exports = function(worker){
 
     var lenze = Lenze.replicant({
-        recieve: function(callback){
+        receive: function(callback){
             worker.addEventListener('message', function(message){
                 callback(message.data);
             });
         },
-        invoke: function(data){
+        send: function(data){
             worker.postMessage(data);
         }
     });

@@ -3,7 +3,7 @@ var lenze = require('../../')({
     send: function(data){
         self.postMessage(data);
     },
-    handleInvoke: function(callback){
+    receive: function(callback){
         self.addEventListener('message', function(message){
             callback(message.data);
         });
@@ -24,5 +24,3 @@ state.y = state.x;
 setTimeout(function(){
     state.z = state.x;
 }, 1000);
-
-module.exports = lenze;
