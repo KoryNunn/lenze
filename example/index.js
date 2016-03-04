@@ -1,3 +1,2 @@
-var app = require('./app');
-
-var ui = require('./ui');
+var myWorker = new Worker("app/app.browser.js"),
+    ui = require('./ui')(myWorker)
