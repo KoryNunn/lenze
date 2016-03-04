@@ -19,7 +19,7 @@ var lenze = Lenze({
         self.postMessage(data);
     },
 
-    // How to receive invokations/connects
+    // How to receive invocations/connects
     receive: function(callback){
         self.addEventListener('message', function(message){
             callback(message.data);
@@ -50,7 +50,7 @@ var lenze = Lenze.replicant({
         });
     },
 
-    // How to send invokations/connects
+    // How to send invocations/connects
     send: function(data){
         worker.postMessage(data);
     }
