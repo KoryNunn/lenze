@@ -15,7 +15,7 @@ var state = lenze.state;
 
 function updateUsers(){
     state.visibleUsers = state.users && state.users.filter(function(user){
-        return user.name.indexOf(state.search);
+        return ~user.name.indexOf(state.search);
     });
 };
 

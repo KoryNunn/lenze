@@ -33,19 +33,19 @@ module.exports = function(worker){
         ).attach(state);
 
     lenze.on('ready', function(){
-        state.update(lenze.state);
+        state.attach(lenze.state);
     });
 
     lenze.on('change', function(changes){
-        changes.forEach(function(change){
-            if(change.kind === 'N' || change.kind === 'E'){
-                state.set(change.path, change.rhs);
-            }else if( change.kind === 'D'){
-                state.remove(change.path);
-            }else if( change.kind === 'A'){
-                console.log('x');
+        for(var i = 1; i < changes.length; i++){
+            var change = lenze.getChangeInfo(changes[i]);
+
+            if(change.type === 'r'){
+                Enti.set(change.target, change.key, undefined);
+            }else{
+                Enti.set(change.target, change.key, change.value);
             }
-        });
+        };
     });
 
     window.onload = function(){

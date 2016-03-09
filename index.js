@@ -76,7 +76,7 @@ function inflateChanges(scope, data){
         }
 
         if('LENZE_FUNCTION' in value){
-            var id = value['LENZE_FUNCTION'];
+            var id = scope.viscous.getId(value);
             delete value['LENZE_FUNCTION'];
             var resultFunction = function(){
                 scope.invoke.apply(null, [id].concat(Array.prototype.slice.call(arguments)));
@@ -130,6 +130,15 @@ function sendInvoke(scope, sendInvoke){
     sendInvoke(INVOKE + ':' + statham.stringify(Array.prototype.slice.call(arguments, 2)));
 }
 
+function getChangeInfo(scope, change){
+    return {
+        target: scope.viscous.getInstance(change[0]),
+        key: change[1],
+        type: change[2],
+        value: Array.isArray(change[3]) ? scope.viscous.getInstance(change[3]) : change[3]
+    };
+}
+
 function initScope(settings){
     if(!settings){
         settings = {};
@@ -146,6 +155,7 @@ function initScope(settings){
     };
 
     lenze.update = shuv(update, scope);
+    lenze.getChangeInfo = shuv(getChangeInfo, scope);
     lenze.state = state;
 
     return scope;
