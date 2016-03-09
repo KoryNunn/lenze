@@ -11,10 +11,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "deep-diff": "^0.3.3",
     "merge": "^1.2.0",
     "shuv": "^1.0.1",
-    "statham": "^1.0.2"
+    "statham": "^1.2.1",
+    "viscous": "^1.1.1"
   },
   "devDependencies": {
     "cpjax": "^1.1.1",
