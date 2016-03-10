@@ -1,26 +1,28 @@
 var cpjax = require('cpjax'),
-    lenze = require('../../')({
-    changeInterval: 16,
-    send: function(data){
-        self.postMessage(data);
-    },
-    receive: function(callback){
-        self.addEventListener('message', function(message){
-            callback(message.data);
-        });
-    }
-});
-
-var state = lenze.state;
+    EventEmitter = require('events'),
+    app = new EventEmitter(),
+    lenze = require('../../')(app, {
+        changeInterval: 16,
+        send: function(data){
+            console.log(data);
+            self.postMessage(data);
+        },
+        receive: function(callback){
+            self.addEventListener('message', function(message){
+                console.log(message.data);
+                callback(message.data);
+            });
+        }
+    });
 
 function updateUsers(){
-    state.visibleUsers = state.users && state.users.filter(function(user){
-        return ~user.name.indexOf(state.search);
+    app.visibleUsers = app.users && app.users.filter(function(user){
+        return ~user.name.indexOf(app.search);
     });
 };
 
-state.setSearch = function(value){
-    state.search = value;
+app.setSearch = function(value){
+    app.search = value;
     updateUsers();
 };
 
@@ -32,6 +34,12 @@ cpjax({
         return;
     }
 
-    state.users = data;
+    app.users = data.map(function(user){
+        user.logName = function(){
+            console.log(user.name);
+        };
+        return user;
+    });
+
     updateUsers();
 });

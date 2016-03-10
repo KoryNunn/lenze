@@ -1,36 +1,52 @@
 var EventEmitter = require('events'),
     viscous = require('viscous'),
     shuv = require('shuv'),
-    statham = require('statham'),
     createKey = require('./createKey'),
     keyKey = createKey(-2),
     merge = require('merge');
 
-var INVOKE = 'invoke';
-var CHANGES = 'changes';
-var CONNECT = 'connect';
-var STATE = 'state';
-
-function functionTransform(scope, key, value){
-    if(typeof value === 'function'){
-        var result = {'LENZE_FUNCTION':scope.viscous.getId(value)};
-        for(var key in value){
-            result[key] = value[key];
-        }
-        return result;
-    }
-    if(Array.isArray(value)){
-        var result = {'LENZE_ARRAY':scope.viscous.getId(value)};
-        for(var key in value){
-            result[key] = value[key];
-        }
-        return result;
-    }
-    return value;
-}
+var INVOKE = 'i';
+var CHANGES = 'c';
+var CONNECT = 'o';
+var STATE = 's';
+var LENZE_FUNCTION = String.fromCharCode(0x192);
 
 function createChanges(scope, changes){
-    return statham.stringify(changes, shuv(functionTransform, scope));
+    changes = changes.slice();
+
+    changes[0].forEach(function(change){
+        var value = change[1];
+
+        if(typeof value === 'function'){
+            var result = {};
+            for(var key in value){
+                result[key] = value[key];
+            }
+            change[1] = [LENZE_FUNCTION, result];
+        }
+    });
+
+    return JSON.stringify(changes);
+}
+
+function inflateChanges(scope, data){
+    var changes = JSON.parse(data);
+
+    changes[0].forEach(function(change){
+        var value = change[1];
+
+        if(value && Array.isArray(value) && value[0] === LENZE_FUNCTION){
+            var result = function(){
+                scope.invoke.apply(null, [scope.viscous.getId(result)].concat(Array.prototype.slice.call(arguments)));
+            };
+            for(var key in value[1]){
+                result[key] = value[1][key];
+            }
+            change[1] = result;
+        }
+    });
+
+    return changes;
 }
 
 function parseMessage(data){
@@ -52,53 +68,12 @@ function receive(scope, data){
     }
 
     if(message.type === INVOKE){
-        scope.handleFunction.apply(null, statham.parse(message.data));
+        scope.handleFunction.apply(null, JSON.parse(message.data));
     }
 
     if(message.type === CONNECT){
         scope.send(CONNECT, scope.viscous.state());
     }
-}
-
-function inflateChanges(scope, data){
-    var changes = statham.parse(data, function(key, value){
-        if(!value || !(typeof value === 'object' || typeof value === 'function')){
-            return value;
-        }
-
-        if('LENZE_ARRAY' in value){
-            delete value['LENZE_ARRAY'];
-            var resultArray = [];
-            for(var key in value){
-                resultArray[key] = value[key];
-            }
-            return resultArray;
-        }
-
-        if('LENZE_FUNCTION' in value){
-            var id = scope.viscous.getId(value);
-            delete value['LENZE_FUNCTION'];
-            var resultFunction = function(){
-                scope.invoke.apply(null, [id].concat(Array.prototype.slice.call(arguments)));
-            };
-            for(var key in value){
-                resultFunction[key] = value[key];
-            }
-            return resultFunction;
-        }
-
-        return value;
-    });
-
-    changes[0] = changes[0].map(function(instanceChange){
-        if(instanceChange[1] !== 'r'){
-
-        }
-
-        return instanceChange;
-    });
-
-    return changes;
 }
 
 function update(scope){
@@ -127,7 +102,7 @@ function send(scope, send, type, data){
 }
 
 function sendInvoke(scope, sendInvoke){
-    sendInvoke(INVOKE + ':' + statham.stringify(Array.prototype.slice.call(arguments, 2)));
+    sendInvoke(INVOKE + ':' + JSON.stringify(Array.prototype.slice.call(arguments, 2)));
 }
 
 function getChangeInfo(scope, change){
@@ -139,17 +114,17 @@ function getChangeInfo(scope, change){
     };
 }
 
-function initScope(settings){
+function initScope(state, settings){
+
     if(!settings){
         settings = {};
     }
 
-    var state = {};
+    var state = state || {};
 
     var lenze = new EventEmitter();
     var scope = {
         viscous: viscous(state),
-        functions: {},
         instanceIds: 0,
         lenze: lenze
     };
@@ -161,8 +136,13 @@ function initScope(settings){
     return scope;
 }
 
-function init(settings){
-    var scope = initScope(settings);
+function init(state, settings){
+    if(arguments.length < 2){
+        settings = state;
+        state = null;
+    }
+
+    var scope = initScope(state, settings);
 
     scope.handleFunction = shuv(handleFunction, scope);
     scope.send = shuv(send, scope, settings.send);
@@ -173,8 +153,13 @@ function init(settings){
     return scope.lenze;
 }
 
-function replicant(settings){
-    var scope = initScope();
+function replicant(state, settings){
+    if(arguments.length < 2){
+        settings = state;
+        state = null;
+    }
+
+    var scope = initScope(state);
 
     scope.instanceHash = {};
 
