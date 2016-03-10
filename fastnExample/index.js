@@ -1,2 +1,4 @@
-var myWorker = new Worker("app/app.browser.js"),
+require('pseudo-worker/polyfill');
+
+var myWorker = new Worker('app/app.browser.js'),
     ui = require('./ui')(myWorker);
