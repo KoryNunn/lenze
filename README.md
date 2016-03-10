@@ -9,7 +9,7 @@ In thread 1:
 ```javascript
 var Lenze = require('lenze');
 
-var lenze = Lenze({
+var lenze = Lenze(sourceStateObject, {
 
     // Optional, defaults to 100
     changeInterval: 100,
@@ -41,7 +41,7 @@ var Lenze = require('../../');
 
 var worker = new Worker("thread1.js");
 
-var lenze = Lenze.replicant({
+var lenze = Lenze.replicant(targetStateObject, {
 
     // How to recieve updates/state
     receive: function(callback){
@@ -74,8 +74,7 @@ lenze.on('change', function(){
 
 ## Notes
 
- - Object references are maintained.
- - Function references are NOT currently maintained. this is a TODO.
+ - Instance references (objects/function) are maintained.
 
  This is a very experimental.
  The code is very messy and not optimised.
