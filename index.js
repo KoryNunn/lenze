@@ -12,41 +12,11 @@ var STATE = 's';
 var LENZE_FUNCTION = String.fromCharCode(0x192);
 
 function createChanges(scope, changes){
-    changes = changes.slice();
-
-    changes[0].forEach(function(change){
-        var value = change[1];
-
-        if(typeof value === 'function'){
-            var result = {};
-            for(var key in value){
-                result[key] = value[key];
-            }
-            change[1] = [LENZE_FUNCTION, result];
-        }
-    });
-
     return JSON.stringify(changes);
 }
 
 function inflateChanges(scope, data){
-    var changes = JSON.parse(data);
-
-    changes[0].forEach(function(change){
-        var value = change[1];
-
-        if(value && Array.isArray(value) && value[0] === LENZE_FUNCTION){
-            var result = function(){
-                scope.invoke.apply(null, [scope.viscous.getId(result)].concat(Array.prototype.slice.call(arguments)));
-            };
-            for(var key in value[1]){
-                result[key] = value[1][key];
-            }
-            change[1] = result;
-        }
-    });
-
-    return changes;
+    return JSON.parse(data);
 }
 
 function parseMessage(data){
@@ -114,6 +84,33 @@ function getChangeInfo(scope, change){
     };
 }
 
+function serialise(scope, value){
+    if(typeof value === 'function'){
+        var result = {};
+
+        for(var key in value){
+            result[key] = value[key];
+        }
+
+        return [result, LENZE_FUNCTION];
+    }
+}
+
+function deserialise(scope, definition){
+    if(definition[1] === LENZE_FUNCTION){
+        var value = definition[0],
+            result = function(){
+                scope.invoke.apply(null, [scope.viscous.getId(result)].concat(Array.prototype.slice.call(arguments)));
+            };
+
+        for(var key in value){
+            result[key] = value[key];
+        }
+
+        return result;
+    }
+}
+
 function initScope(state, settings){
 
     if(!settings){
@@ -124,10 +121,14 @@ function initScope(state, settings){
 
     var lenze = new EventEmitter();
     var scope = {
-        viscous: viscous(state),
         instanceIds: 0,
         lenze: lenze
     };
+
+    scope.viscous = viscous(state, {
+        serialiser: shuv(serialise, scope),
+        deserialiser: shuv(deserialise, scope)
+    });
 
     lenze.update = shuv(update, scope);
     lenze.getChangeInfo = shuv(getChangeInfo, scope);
