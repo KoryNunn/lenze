@@ -17,7 +17,7 @@ var cpjax = require('cpjax'),
 
 function updateUsers(){
     app.visibleUsers = app.users && app.users.filter(function(user){
-        return ~user.name.indexOf(app.search);
+        return ~user.name.indexOf(app.search || '');
     });
 };
 
@@ -38,6 +38,7 @@ cpjax({
         user.logName = function(){
             console.log(user.name);
         };
+        user.dob = new Date(1930 + (Math.random() * 90), 1, 1);
         return user;
     });
 

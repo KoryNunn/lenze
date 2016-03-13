@@ -13,11 +13,12 @@
   "dependencies": {
     "merge": "^1.2.0",
     "shuv": "^1.0.1",
-    "viscous": "^1.1.1"
+    "viscous": "^2.0.0"
   },
   "devDependencies": {
     "cpjax": "^1.1.1",
     "crel": "^2.2.0",
+    "fastn": "^2.6.6",
     "pseudo-worker": "^1.0.2",
     "webworker-fallback": "^0.5.0"
   }

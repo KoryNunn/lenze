@@ -1,9 +1,6 @@
 var EventEmitter = require('events'),
     viscous = require('viscous'),
-    shuv = require('shuv'),
-    createKey = require('./createKey'),
-    keyKey = createKey(-2),
-    merge = require('merge');
+    shuv = require('shuv');
 
 var INVOKE = 'i';
 var CHANGES = 'c';
@@ -63,11 +60,8 @@ function handleFunction(scope, id){
 }
 
 function send(scope, send, type, data){
-    if(type === CHANGES){
-        send(CHANGES + ':' + createChanges(scope, data));
-    }
-    if(type === CONNECT){
-        send(STATE + ':' + createChanges(scope, data));
+    if(type === CHANGES || type === CONNECT){
+        send(type + ':' + createChanges(scope, data));
     }
 }
 
@@ -119,20 +113,17 @@ function initScope(state, settings){
 
     var state = state || {};
 
-    var lenze = new EventEmitter();
-    var scope = {
-        instanceIds: 0,
-        lenze: lenze
-    };
+    var scope = {};
 
+    scope.lenze = new EventEmitter();
     scope.viscous = viscous(state, {
         serialiser: shuv(serialise, scope),
         deserialiser: shuv(deserialise, scope)
     });
 
-    lenze.update = shuv(update, scope);
-    lenze.getChangeInfo = shuv(getChangeInfo, scope);
-    lenze.state = state;
+    scope.lenze.update = shuv(update, scope);
+    scope.lenze.getChangeInfo = shuv(getChangeInfo, scope);
+    scope.lenze.state = state;
 
     return scope;
 }
@@ -176,7 +167,7 @@ function replicant(state, settings){
             return;
         }
 
-        if(message.type === STATE){
+        if(message.type === STATE || message.type === CONNECT){
             scope.viscous.apply(inflateChanges(scope, message.data));
             update(scope);
         }

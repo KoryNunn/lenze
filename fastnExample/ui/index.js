@@ -13,7 +13,11 @@ module.exports = function(worker){
                 items: fastn.binding('visibleUsers|*'),
                 template: function(){
                     return fastn('div',
-                        fastn.binding('name')
+                        'Name: ', fastn.binding('name'),
+                        ' - ',
+                        'Age: ', fastn.binding('dob', function(dob){
+                            return new Date().getYear() - dob.getYear();
+                        })
                     )
                     .binding('item')
                     .on('click', function(event, scope){
