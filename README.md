@@ -11,8 +11,17 @@ var Lenze = require('lenze');
 
 var lenze = Lenze(sourceStateObject, {
 
-    // Optional, defaults to 100
-    changeInterval: 100,
+    // Optional, defaults to 30
+    // How often to poll when there have been recent changes
+    minInterval: 30,
+
+    // Optional, defaults to 300
+    // How often to poll when there have not been recent changes
+    maxInterval: 300,
+
+    // Optional, defaults to 1000
+    // How long to poll at minInterval before returning to maxInterval
+    dozeInterval: 300,
 
     // How to send updates
     send: function(data){

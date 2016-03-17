@@ -1,9 +1,6 @@
 var EventEmitter = require('events'),
     viscous = require('viscous'),
-    shuv = require('shuv'),
-    createKey = require('./createKey'),
-    keyKey = createKey(-2),
-    merge = require('merge');
+    shuv = require('shuv');
 
 var INVOKE = 'i';
 var CHANGES = 'c';
@@ -12,41 +9,11 @@ var STATE = 's';
 var LENZE_FUNCTION = String.fromCharCode(0x192);
 
 function createChanges(scope, changes){
-    changes = changes.slice();
-
-    changes[0].forEach(function(change){
-        var value = change[1];
-
-        if(typeof value === 'function'){
-            var result = {};
-            for(var key in value){
-                result[key] = value[key];
-            }
-            change[1] = [LENZE_FUNCTION, result];
-        }
-    });
-
     return JSON.stringify(changes);
 }
 
 function inflateChanges(scope, data){
-    var changes = JSON.parse(data);
-
-    changes[0].forEach(function(change){
-        var value = change[1];
-
-        if(value && Array.isArray(value) && value[0] === LENZE_FUNCTION){
-            var result = function(){
-                scope.invoke.apply(null, [scope.viscous.getId(result)].concat(Array.prototype.slice.call(arguments)));
-            };
-            for(var key in value[1]){
-                result[key] = value[1][key];
-            }
-            change[1] = result;
-        }
-    });
-
-    return changes;
+    return JSON.parse(data);
 }
 
 function parseMessage(data){
@@ -76,10 +43,24 @@ function receive(scope, data){
     }
 }
 
-function update(scope){
+function update(){
+    var scope = this;
+    var now = Date.now();
+
+    if(
+        now - scope.lastUpdate < scope.maxInterval &&
+        now - scope.lastChange > scope.dozeTime
+    ){
+        return;
+    }
+
+    scope.lastUpdate = now;
+
     var changes = scope.viscous.changes();
 
-    if(changes.length > 1){
+    if(changes.length > 1 || changes[0].length > 1){
+        scope.lastChange = now;
+
         scope.lenze.emit('change', changes);
 
         if(scope.send){
@@ -89,15 +70,14 @@ function update(scope){
 }
 
 function handleFunction(scope, id){
-    scope.viscous.getInstance(id).apply(this, Array.prototype.slice.call(arguments, 2));
+    scope.lastChange = Date.now();
+    scope.viscous.getInstance(id).apply(this, scope.viscous.inflate(Array.prototype.slice.call(arguments, 2)));
+    scope.lenze.update();
 }
 
 function send(scope, send, type, data){
-    if(type === CHANGES){
-        send(CHANGES + ':' + createChanges(scope, data));
-    }
-    if(type === CONNECT){
-        send(STATE + ':' + createChanges(scope, data));
+    if(type === CHANGES || type === CONNECT){
+        send(type + ':' + createChanges(scope, data));
     }
 }
 
@@ -114,6 +94,37 @@ function getChangeInfo(scope, change){
     };
 }
 
+function serialise(value){
+    var scope = this;
+
+    if(typeof value === 'function'){
+        var result = {};
+
+        for(var key in value){
+            result[key] = value[key];
+        }
+
+        return [result, LENZE_FUNCTION];
+    }
+}
+
+function deserialise(definition){
+    var scope = this;
+
+    if(definition[1] === LENZE_FUNCTION){
+        var value = definition[0],
+            result = function(){
+                scope.invoke.apply(null, [scope.viscous.getId(result)].concat(scope.viscous.describe(Array.prototype.slice.call(arguments))));
+            };
+
+        for(var key in value){
+            result[key] = value[key];
+        }
+
+        return result;
+    }
+}
+
 function initScope(state, settings){
 
     if(!settings){
@@ -122,16 +133,17 @@ function initScope(state, settings){
 
     var state = state || {};
 
-    var lenze = new EventEmitter();
-    var scope = {
-        viscous: viscous(state),
-        instanceIds: 0,
-        lenze: lenze
-    };
+    var scope = {};
 
-    lenze.update = shuv(update, scope);
-    lenze.getChangeInfo = shuv(getChangeInfo, scope);
-    lenze.state = state;
+    scope.lenze = new EventEmitter();
+    scope.viscous = viscous(state, {
+        serialiser: serialise.bind(scope),
+        deserialiser: deserialise.bind(scope)
+    });
+
+    scope.lenze.update = update.bind(scope);
+    scope.lenze.getChangeInfo = shuv(getChangeInfo, scope);
+    scope.lenze.state = state;
 
     return scope;
 }
@@ -148,7 +160,11 @@ function init(state, settings){
     scope.send = shuv(send, scope, settings.send);
     settings.receive(shuv(receive, scope));
 
-    setInterval(scope.lenze.update, settings.changeInterval || 100);
+    scope.minInterval = settings.minInterval || 30; // About two frames
+    scope.maxInterval = settings.maxInterval || 300; // About what humans find "quick"
+    scope.dozeTime = settings.dozeTime || 1000; // About how long between linked human actions
+
+    setInterval(scope.lenze.update, scope.minInterval);
 
     return scope.lenze;
 }
@@ -175,14 +191,14 @@ function replicant(state, settings){
             return;
         }
 
-        if(message.type === STATE){
+        if(message.type === STATE || message.type === CONNECT){
             scope.viscous.apply(inflateChanges(scope, message.data));
-            update(scope);
+            scope.lenze.update();
         }
 
         if(message.type === CHANGES){
             scope.viscous.apply(inflateChanges(scope, message.data));
-            update(scope);
+            scope.lenze.update();
         }
     });
 
