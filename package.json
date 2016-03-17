@@ -13,7 +13,7 @@
   "dependencies": {
     "merge": "^1.2.0",
     "shuv": "^1.0.1",
-    "viscous": "^2.0.0"
+    "viscous": "^2.1.0"
   },
   "devDependencies": {
     "cpjax": "^1.1.1",

@@ -4,12 +4,10 @@ var cpjax = require('cpjax'),
     lenze = require('../../')(app, {
         changeInterval: 16,
         send: function(data){
-            console.log(data);
             self.postMessage(data);
         },
         receive: function(callback){
             self.addEventListener('message', function(message){
-                console.log(message.data);
                 callback(message.data);
             });
         }
@@ -26,6 +24,10 @@ app.setSearch = function(value){
     updateUsers();
 };
 
+app.setSelectedUser = function(user){
+    app.selectedUser = user;
+};
+
 cpjax({
     url: 'users.json',
     dataType: 'json'
@@ -35,8 +37,9 @@ cpjax({
     }
 
     app.users = data.map(function(user){
-        user.logName = function(){
-            console.log(user.name);
+        user.setName = function(newName){
+            user.name = newName;
+            updateUsers();
         };
         user.dob = new Date(1930 + (Math.random() * 90), 1, 1);
         return user;
