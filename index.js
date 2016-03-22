@@ -1,5 +1,6 @@
 var EventEmitter = require('events'),
     viscous = require('viscous'),
+    isInstance = require('is-instance'),
     shuv = require('shuv');
 
 var INVOKE = 'i';
@@ -98,7 +99,9 @@ function serialise(value){
     var scope = this;
 
     if(typeof value === 'function'){
-        var result = {};
+        var result = {
+            name: value.name
+        };
 
         for(var key in value){
             result[key] = value[key];
@@ -114,8 +117,19 @@ function deserialise(definition){
     if(definition[1] === LENZE_FUNCTION){
         var value = definition[0],
             result = function(){
-                scope.invoke.apply(null, [scope.viscous.getId(result)].concat(scope.viscous.describe(Array.prototype.slice.call(arguments))));
+                var args = Array.prototype.map.call(arguments, function(arg){
+                    if(isInstance(arg)){
+                        if(arg instanceof Event){
+                            console.warn("Lenze does not support the transmission of browser Events");
+                            return;
+                        }
+                    }
+                    return arg;
+                });
+
+                scope.invoke.apply(null, [scope.viscous.getId(result)].concat(scope.viscous.describe(args)));
             };
+            result.name = value.name;
 
         for(var key in value){
             result[key] = value[key];
@@ -191,12 +205,11 @@ function replicant(state, settings){
             return;
         }
 
-        if(message.type === STATE || message.type === CONNECT){
-            scope.viscous.apply(inflateChanges(scope, message.data));
-            scope.lenze.update();
-        }
-
-        if(message.type === CHANGES){
+        if(
+            message.type === CHANGES ||
+            message.type === STATE ||
+            message.type === CONNECT
+        ){
             scope.viscous.apply(inflateChanges(scope, message.data));
             scope.lenze.update();
         }

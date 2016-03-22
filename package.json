@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "is-instance": "^1.0.0",
     "merge": "^1.2.0",
     "shuv": "^1.0.1",
     "viscous": "^2.1.0"
