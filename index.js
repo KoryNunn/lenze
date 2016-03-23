@@ -139,12 +139,7 @@ function deserialise(definition){
     }
 }
 
-function initScope(state, settings){
-
-    if(!settings){
-        settings = {};
-    }
-
+function initScope(state){
     var state = state || {};
 
     var scope = {};
@@ -168,7 +163,7 @@ function init(state, settings){
         state = null;
     }
 
-    var scope = initScope(state, settings);
+    var scope = initScope(state);
 
     scope.handleFunction = shuv(handleFunction, scope);
     scope.send = shuv(send, scope, settings.send);
@@ -179,6 +174,11 @@ function init(state, settings){
     scope.dozeTime = settings.dozeTime || 1000; // About how long between linked human actions
 
     setInterval(scope.lenze.update, scope.minInterval);
+
+    setTimeout(function(){
+        // Let all replicants know initial state.
+        scope.send(CONNECT, scope.viscous.state());
+    });
 
     return scope.lenze;
 }
@@ -194,14 +194,14 @@ function replicant(state, settings){
     scope.instanceHash = {};
 
     settings.receive(function(data){
-        if(!scope.ready){
-            scope.ready = true;
-            scope.lenze.emit('ready');
-        }
 
         var message = parseMessage(data);
 
         if(!message){
+            return;
+        }
+
+        if(!scope.ready && message.type !== CONNECT){
             return;
         }
 
@@ -212,6 +212,11 @@ function replicant(state, settings){
         ){
             scope.viscous.apply(inflateChanges(scope, message.data));
             scope.lenze.update();
+        }
+
+        if(!scope.ready){
+            scope.ready = true;
+            scope.lenze.emit('ready');
         }
     });
 
