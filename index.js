@@ -7,6 +7,7 @@ var INVOKE = 'i';
 var CHANGES = 'c';
 var CONNECT = 'o';
 var STATE = 's';
+var RESULT = 'r';
 var LENZE_FUNCTION = String.fromCharCode(0x192);
 
 function createChanges(scope, changes){
@@ -70,10 +71,17 @@ function update(){
     }
 }
 
-function handleFunction(scope, id){
+function handleFunction(scope, id, timeStamp, args){
     scope.lastChange = Date.now();
-    scope.viscous.getInstance(id).apply(this, scope.viscous.inflate(Array.prototype.slice.call(arguments, 2)));
+    var targetFunction = scope.viscous.getInstance(id);
+
+    if(typeof targetFunction !== 'function'){
+       return scope.result(id, timeStamp, {type: 'error', message: 'Target was not a function'});
+    }
+
+    scope.viscous.getInstance(id).apply(this, scope.viscous.inflate(args));
     scope.lenze.update();
+   scope.result(id, timeStamp, null);
 }
 
 function send(scope, send, type, data){
@@ -82,8 +90,12 @@ function send(scope, send, type, data){
     }
 }
 
-function sendInvoke(scope, sendInvoke){
-    sendInvoke(INVOKE + ':' + JSON.stringify(Array.prototype.slice.call(arguments, 2)));
+function sendInvoke(scope, send, id, timeStamp, args){
+    send(INVOKE + ':' + JSON.stringify([id, timeStamp, args]));
+}
+
+function sendResult(scope, send, id, timeStamp, result){
+    send(RESULT + ':' + JSON.stringify([id, timeStamp, result]));
 }
 
 function getChangeInfo(scope, change){
@@ -93,6 +105,24 @@ function getChangeInfo(scope, change){
         type: change[2],
         value: Array.isArray(change[3]) ? scope.viscous.getInstance(change[3]) : change[3]
     };
+}
+
+function handleResult(scope, data){
+    data = JSON.parse(data);
+    var fnId = data[0],
+        timeStamp = data[1],
+        error = data[2],
+        stack = scope.invokes[data[0]][data[1]];
+
+    delete scope.invokes[data[0]][data[1]];
+
+    if(!error){
+        return;
+    }
+
+    error = new Error(error.message);
+    error.stack = stack;
+    throw error;
 }
 
 function serialise(value){
@@ -111,25 +141,37 @@ function serialise(value){
     }
 }
 
+function createCaller(scope, config){
+    var result = function(){
+        var args = Array.prototype.map.call(arguments, function(arg){
+            if(isInstance(arg)){
+                if(arg instanceof Event){
+                    console.warn("Lenze does not support the transmission of browser Events");
+                    return;
+                }
+            }
+            return arg;
+        });
+
+        var stack = new Error().stack,
+            fnId = scope.viscous.getId(result),
+            timeStamp = Date.now();
+
+        scope.invokes[fnId] = scope.invokes[fnId] || {};
+        scope.invokes[fnId][timeStamp] = stack;
+        scope.invoke.call(null, scope.viscous.getId(result), timeStamp, scope.viscous.describe(args));
+    };
+    result.name = config.name;
+
+    return result;
+}
+
 function deserialise(definition){
     var scope = this;
 
     if(definition[1] === LENZE_FUNCTION){
         var value = definition[0],
-            result = function(){
-                var args = Array.prototype.map.call(arguments, function(arg){
-                    if(isInstance(arg)){
-                        if(arg instanceof Event){
-                            console.warn("Lenze does not support the transmission of browser Events");
-                            return;
-                        }
-                    }
-                    return arg;
-                });
-
-                scope.invoke.apply(null, [scope.viscous.getId(result)].concat(scope.viscous.describe(args)));
-            };
-            result.name = value.name;
+            result = createCaller(scope, value);
 
         for(var key in value){
             result[key] = value[key];
@@ -167,6 +209,7 @@ function init(state, settings){
 
     scope.handleFunction = shuv(handleFunction, scope);
     scope.send = shuv(send, scope, settings.send);
+    scope.result = shuv(sendResult, scope, settings.send);
     settings.receive(shuv(receive, scope));
 
     scope.minInterval = settings.minInterval || 30; // About two frames
@@ -191,6 +234,7 @@ function replicant(state, settings){
 
     var scope = initScope(state);
 
+    scope.invokes = {};
     scope.instanceHash = {};
 
     settings.receive(function(data){
@@ -205,13 +249,19 @@ function replicant(state, settings){
             return;
         }
 
+        var type = message.type;
+
         if(
-            message.type === CHANGES ||
-            message.type === STATE ||
-            message.type === CONNECT
+            type === CHANGES ||
+            type === STATE ||
+            type === CONNECT
         ){
             scope.viscous.apply(inflateChanges(scope, message.data));
             scope.lenze.update();
+        }
+
+        if(type === RESULT){
+            handleResult(scope, message.data);
         }
 
         if(!scope.ready){
