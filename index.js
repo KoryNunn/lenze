@@ -81,7 +81,7 @@ function handleFunction(scope, id, timeStamp, args){
 
     scope.viscous.getInstance(id).apply(this, scope.viscous.inflate(args));
     scope.lenze.update();
-   scope.result(id, timeStamp, null);
+    scope.result(id, timeStamp, null);
 }
 
 function send(scope, send, type, data){

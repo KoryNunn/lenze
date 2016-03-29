@@ -19,12 +19,8 @@ module.exports = function(worker){
         for(var i = 1; i < changes.length; i++){
             var change = lenze.getChangeInfo(changes[i]);
 
-            if(change.type === 'r'){
-                fastn.Model.remove(change.target, change.key);
-            }else{
-                fastn.Model.set(change.target, change.key, change.value);
-            }
-        };
+            fastn.Model.emit(change.target, change.key, change.value);
+        }
     });
 
     return app;

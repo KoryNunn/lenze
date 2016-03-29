@@ -15,7 +15,7 @@ var cpjax = require('cpjax'),
 
 function updateUsers(){
     app.visibleUsers = app.users && app.users.filter(function(user){
-        return ~user.name.indexOf(app.search || '');
+        return ~user.name.toLowerCase().indexOf((app.search || '').toLowerCase());
     });
 };
 
