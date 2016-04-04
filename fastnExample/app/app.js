@@ -1,3 +1,5 @@
+importScripts('http//cdn.polyfill.io/v1/polyfill.min.js?features=all');
+
 var cpjax = require('cpjax'),
     EventEmitter = require('events'),
     app = new EventEmitter(),
