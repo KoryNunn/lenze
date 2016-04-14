@@ -1,6 +1,6 @@
 {
   "name": "lenze",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "cross instance state replication with function invoking",
   "main": "index.js",
   "scripts": {
